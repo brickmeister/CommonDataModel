@@ -1,3 +1,4 @@
+-- Databricks notebook source
 CREATE
 OR REPLACE TABLE metadata (
   metadata_concept_id LONG,
@@ -8,6 +9,7 @@ OR REPLACE TABLE metadata (
   metadata_date DATE,
   metadata_datetime TIMESTAMP
 ) USING DELTA;
+
 INSERT INTO
   metadata
 VALUES

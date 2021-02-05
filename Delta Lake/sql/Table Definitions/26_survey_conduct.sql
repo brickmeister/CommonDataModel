@@ -1,0 +1,28 @@
+CREATE
+  OR REPLACE TABLE survey_conduct (
+    survey_conduct_id LONG,
+    person_id LONG,
+    survey_concept_id LONG,
+    survey_start_date DATE,
+    survey_start_datetime TIMESTAMP,
+    survey_end_date DATE,
+    survey_end_datetime TIMESTAMP,
+    provider_id LONG,
+    assisted_concept_id LONG,
+    respondent_type_concept_id LONG,
+    timing_concept_id LONG,
+    collection_method_concept_id LONG,
+    assisted_source_value STRING,
+    respondent_type_source_value STRING,
+    timing_source_value STRING,
+    collection_method_source_value STRING,
+    survey_source_value STRING,
+    survey_source_concept_id LONG,
+    survey_source_identifier STRING,
+    validated_survey_concept_id LONG,
+    validated_survey_source_value STRING,
+    survey_version_number STRING,
+    visit_occurrence_id LONG,
+    visit_detail_id LONG,
+    response_visit_occurrence_id LONG
+  ) USING DELTA;

@@ -1,11 +1,65 @@
 -- Databricks notebook source
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC # This is an implementation of OMOP v6.0 on Databricks Delta Lake
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ## Setup some widgets
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC """
+-- MAGIC Create a widget to get the database name
+-- MAGIC """
+-- MAGIC 
+-- MAGIC dbutils.widgets.text("DATABASE_NAME", "OMOP60")
+-- MAGIC dbutils.widgets.text("DATABASE_LOCATION", "/FileStore/tables/OMOP60")
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ## Clean Up Databases
+
+-- COMMAND ----------
+
 -- DBTITLE 1,Drop Existing OMOP Database
-DROP DATABASE IF EXISTS OMOP60 CASCADE;
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC """
+-- MAGIC Drop current database name,
+-- MAGIC Drop tables as well
+-- MAGIC """
+-- MAGIC 
+-- MAGIC spark.sql(f"""
+-- MAGIC DROP DATABASE IF EXISTS {dbutils.widgets.get('DATABASE_NAME')} 
+-- MAGIC   CASCADE;
+-- MAGIC """);
 
 -- COMMAND ----------
 
 -- DBTITLE 1,Create OMOP Lakehouse Database
-CREATE DATABASE IF NOT EXISTS OMOP60 LOCATION '/FileStore/tables/OMOP60';
+-- MAGIC %python
+-- MAGIC 
+-- MAGIC """
+-- MAGIC Create a OMOP Database
+-- MAGIC """
+-- MAGIC 
+-- MAGIC spark.sql(f"""
+-- MAGIC CREATE DATABASE IF NOT EXISTS {dbutils.widgets.get('DATABASE_NAME')}
+-- MAGIC   LOCATION '{dbutils.widgets.get('DATABASE_LOCATION')}';
+-- MAGIC """)
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ## Create Table Schema
 
 -- COMMAND ----------
 
@@ -14,49 +68,122 @@ USE OMOP60;
 
 -- COMMAND ----------
 
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ### Concept
+
+-- COMMAND ----------
+
+-- MAGIC %sql
+-- MAGIC 
+-- MAGIC --
+-- MAGIC -- Create the concept table
+-- MAGIC -- https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:concept
+-- MAGIC --
+-- MAGIC 
+-- MAGIC CREATE OR REPLACE TABLE concept (concept_id LONG,
+-- MAGIC                                  concept_name STRING,
+-- MAGIC                                  domain_id STRING,
+-- MAGIC                                  vocabulary_id STRING,
+-- MAGIC                                  concept_class_id STRING,
+-- MAGIC                                  standard_concept STRING,
+-- MAGIC                                  concept_code STRING,
+-- MAGIC                                  valid_start_date DATE,
+-- MAGIC                                  valid_end_date DATE,
+-- MAGIC                                  invalid_reason STRING) 
+-- MAGIC   USING DELTA;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ### Domain
+
+-- COMMAND ----------
+
+-- MAGIC %sql
+-- MAGIC 
+-- MAGIC --
+-- MAGIC -- Create the domain table
+-- MAGIC -- https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:domain
+-- MAGIC --
+-- MAGIC 
+-- MAGIC CREATE OR REPLACE TABLE vocabulary (vocabulary_id STRING,
+-- MAGIC                                     vocabulary_name STRING,
+-- MAGIC                                     vocabulary_reference STRING,
+-- MAGIC                                     vocabulary_version STRING,
+-- MAGIC                                     vocabulary_concept_id LONG)
+-- MAGIC   USING DELTA;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ### Vocabulary
+
+-- COMMAND ----------
+
+-- MAGIC %sql
+-- MAGIC 
+-- MAGIC --
+-- MAGIC -- Create the domain table
+-- MAGIC -- https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:vocabulary
+-- MAGIC --
+-- MAGIC 
+-- MAGIC CREATE OR REPLACE TABLE vocabulary (vocabulary_id STRING,
+-- MAGIC                                     vocabulary_name STRING,
+-- MAGIC                                     vocabulary_reference STRING,
+-- MAGIC                                     vocabulary_version STRING,
+-- MAGIC                                     vocabulary_concept_id LONG) 
+-- MAGIC   USING DELTA;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ### Concept Class
+
+-- COMMAND ----------
+
+--
+-- Create the domain table
+-- https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:concept_class
+--
+
+CREATE OR REPLACE TABLE concept_class (concept_class_id STRING,
+                                       concept_class_name STRING,
+                                       concept_class_concept_id LONG)
+  USING DELTA;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ### Concept Relationship
+
+-- COMMAND ----------
+
+-- MAGIC %sql
+-- MAGIC 
+-- MAGIC --
+-- MAGIC -- Create the domain table
+-- MAGIC -- https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:concept_relationship
+-- MAGIC --
+-- MAGIC 
+-- MAGIC CREATE OR REPLACE TABLE concept_relationship (concept_id_1 LONG,
+-- MAGIC                                               concept_id_2 LONG,
+-- MAGIC                                               relationship_id STRING,
+-- MAGIC                                               valid_start_date DATE,
+-- MAGIC                                               valid_end_date DATE,
+-- MAGIC                                               invalid_reason STRING)
+-- MAGIC   USING DELTA;
+
+-- COMMAND ----------
+
 -- DBTITLE 1,OMOP Tables
-CREATE
-OR REPLACE TABLE concept (
-  concept_id LONG,
-  concept_name STRING,
-  domain_id STRING,
-  vocabulary_id STRING,
-  concept_class_id STRING,
-  standard_concept STRING,
-  concept_code STRING,
-  valid_start_date DATE,
-  valid_end_date DATE,
-  invalid_reason STRING
-) USING DELTA;
-CREATE
-OR REPLACE TABLE vocabulary (
-  vocabulary_id STRING,
-  vocabulary_name STRING,
-  vocabulary_reference STRING,
-  vocabulary_version STRING,
-  vocabulary_concept_id LONG
-) USING DELTA;
-CREATE
-OR REPLACE TABLE domain (
-  domain_id STRING,
-  domain_name STRING,
-  domain_concept_id LONG
-) USING DELTA;
-CREATE
-OR REPLACE TABLE concept_class (
-  concept_class_id STRING,
-  concept_class_name STRING,
-  concept_class_concept_id LONG
-) USING DELTA;
-CREATE
-OR REPLACE TABLE concept_relationship (
-  concept_id_1 LONG,
-  concept_id_2 LONG,
-  relationship_id STRING,
-  valid_start_date DATE,
-  valid_end_date DATE,
-  invalid_reason STRING
-) USING DELTA;
+
+
+
 CREATE
 OR REPLACE TABLE relationship (
   relationship_id STRING,
@@ -591,6 +718,18 @@ OR REPLACE TABLE cohort_definition (
   subject_concept_id LONG,
   cohort_initiation_date DATE
 ) USING DELTA;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC # Validate
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC 
+-- MAGIC ## Metadata Version
 
 -- COMMAND ----------
 
